@@ -22,6 +22,7 @@ model User {
   email     String   @unique
   name      String
   password  String   // Akan menyimpan hash password, bukan plain text
+  rekening  String   @unique @default("")
   role      Role     @default(USER)
   balance   Decimal  @default(0) @db.Decimal(12, 2) // Saldo pengguna
 

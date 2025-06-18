@@ -1,6 +1,7 @@
 const { prisma } = require("../config/database");
 const bcrypt = require("bcryptjs");
 const { generateToken } = require("../utils/token");
+const { generateAccountNumber } = require("../utils/helper");
 
 const registerUser = async (userData) => {
   try {
@@ -16,6 +17,11 @@ const registerUser = async (userData) => {
 
     const saltRounds = 12;
     const hashedPassword = await bcrypt.hash(userData.password, saltRounds);
+    const accountNumber = generateAccountNumber();
+
+    if (existingUser.rekening === accountNumber) {
+      throw new Error("Account number already exists, please try again.");
+    }
 
     const newUser = await prisma.user.create({
       data: {
@@ -23,6 +29,7 @@ const registerUser = async (userData) => {
         password: hashedPassword,
         role: userData.role || "USER",
         name: userData.name || "",
+        rekening: accountNumber,
       },
       select: {
         id: true,
