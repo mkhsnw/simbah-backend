@@ -1,6 +1,8 @@
 const {
   createDepositTransaction,
   createWithdrawTransaction,
+  getAllTransactions,
+  getTransactionByUser,
 } = require("../services/transaction.services");
 
 const createTransactionController = async (req, res, next) => {
@@ -35,4 +37,47 @@ const createTransactionController = async (req, res, next) => {
   }
 };
 
-module.exports = createTransactionController;
+const getAllTransactionsController = async (req, res, next) => {
+  try {
+    const transactions = await getAllTransactions();
+    if (!transactions || transactions.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No transactions found",
+      });
+    }
+    return res.status(200).json({
+      success: true,
+      message: "Transactions retrieved successfully",
+      data: transactions,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+};
+
+const getAllTransactionsByUserController = async (req, res, next) => {
+  try {
+    const { id } = req.user;
+    const transactions = await getTransactionByUser(id);
+    return res.status(200).json({
+      success: true,
+      message: "Transactions retrieved successfully",
+      data: transactions,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+};
+
+module.exports = {
+  createTransactionController,
+  getAllTransactionsController,
+  getAllTransactionsByUserController,
+};

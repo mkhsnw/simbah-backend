@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node src/app.js",
     "dev": "nodemon src/server.js",
     "db:studio": "npx prisma studio",
     "db:push": "npx prisma db push",

@@ -18,11 +18,13 @@ const validateAuth = async (req, res, next) => {
   }
 
   const validToken = await verivyToken(token);
-  console.log(validToken);
-
+  if (!validToken) {
+    return res.status(401).json({
+      success: false,
+      message: "Token Unauthorized",
+    });
+  }
   req.user = validToken;
-
-  console.log(req.user);
   next();
 };
 module.exports = { validateAuth };

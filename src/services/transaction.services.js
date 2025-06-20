@@ -122,7 +122,61 @@ const createWithdrawTransaction = async (transactionData, userId) => {
   });
 };
 
+const getAllTransactions = async () => {
+  try {
+    const transactions = await prisma.transaction.findMany({
+      include: {
+        user: {
+          select: {
+            name: true,
+            email: true,
+            balance: true,
+            role: true,
+          },
+        },
+        items: {
+          include: {
+            wasteCategory: true,
+            transaction: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+    return transactions;
+  } catch (error) {
+    console.error("Error fetching transactions:", error);
+    throw new Error("Failed to fetch transactions.");
+  }
+};
+
+const getTransactionByUser = async (userId) => {
+  try {
+    const transactions = await prisma.transaction.findMany({
+      where: { userId: userId },
+      include: {
+        items: {
+          include: {
+            wasteCategory: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+    return transactions;
+  } catch (error) {
+    console.error("Error fetching transactions by user:", error);
+    throw new Error("Failed to fetch transactions for the user.");
+  }
+};
+
 module.exports = {
   createDepositTransaction,
   createWithdrawTransaction,
+  getAllTransactions,
+  getTransactionByUser,
 };
