@@ -19,10 +19,6 @@ const registerUser = async (userData) => {
     const hashedPassword = await bcrypt.hash(userData.password, saltRounds);
     const accountNumber = generateAccountNumber();
 
-    if (existingUser.rekening === accountNumber) {
-      throw new Error("Account number already exists, please try again.");
-    }
-
     const newUser = await prisma.user.create({
       data: {
         email: userData.email,

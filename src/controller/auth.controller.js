@@ -29,7 +29,9 @@ const login = async (req, res, next) => {
       token: user.token,
     });
     next();
-  } catch (error) {}
+  } catch (error) {
+    next(error);
+  }
 };
 
 module.exports = {

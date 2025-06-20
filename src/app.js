@@ -2,6 +2,8 @@ const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const authRoutes = require("./routes/auth.route");
+const wasteRoutes = require("./routes/waste.route");
+const transactionRoutes = require("./routes/transaction.route");
 
 dotenv.config();
 const app = express();
@@ -12,6 +14,8 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/waste", wasteRoutes);
+app.use("/api/transaction", transactionRoutes);
 
 app.get("/", (req, res) => {
   res.send({
