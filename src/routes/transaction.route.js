@@ -5,6 +5,7 @@ const {
   createTransactionController,
   getAllTransactionsController,
   getAllTransactionsByUserController,
+  getReportDataController,
 } = require("../controller/transaction.controller");
 const router = express.Router();
 
@@ -17,5 +18,6 @@ router.post(
 
 router.get("/", validateAuth, getAllTransactionsController);
 router.get("/user", validateAuth, getAllTransactionsByUserController);
+router.get("/report", validateAuth, getReportDataController);
 
 module.exports = router;

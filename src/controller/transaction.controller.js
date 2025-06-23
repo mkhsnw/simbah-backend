@@ -3,6 +3,7 @@ const {
   createWithdrawTransaction,
   getAllTransactions,
   getTransactionByUser,
+  getReportData,
 } = require("../services/transaction.services");
 
 const createTransactionController = async (req, res, next) => {
@@ -76,8 +77,26 @@ const getAllTransactionsByUserController = async (req, res, next) => {
   }
 };
 
+const getReportDataController = async (req, res, next) => {
+  try {
+    const { id } = req.user;
+    const reportData = await getReportData(id);
+    return res.status(200).json({
+      success: true,
+      message: "Report data retrieved successfully",
+      data: reportData,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+};
+
 module.exports = {
   createTransactionController,
   getAllTransactionsController,
   getAllTransactionsByUserController,
+  getReportDataController,
 };

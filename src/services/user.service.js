@@ -1,4 +1,5 @@
 const { prisma } = require("../config/database");
+const { verivyToken } = require("../utils/token");
 
 const getAllUser = async () => {
   try {
@@ -8,6 +9,7 @@ const getAllUser = async () => {
         name: true,
         email: true,
         balance: true,
+        rekening: true,
         role: true,
         createdAt: true,
         updatedAt: true,
@@ -33,6 +35,7 @@ const editUser = async (userId, userData) => {
         name: true,
         email: true,
         balance: true,
+        rekening: true,
         role: true,
         createdAt: true,
         updatedAt: true,
@@ -66,6 +69,7 @@ const getUserById = async (userId) => {
         name: true,
         email: true,
         balance: true,
+        rekening: true,
         role: true,
         createdAt: true,
         updatedAt: true,
@@ -81,9 +85,34 @@ const getUserById = async (userId) => {
   }
 };
 
+const getUserLogin = async (token) => {
+  try {
+    const userData = await verivyToken(token);
+    if (!userData) {
+      throw new Error("Invalid token");
+    }
+    const user = await prisma.user.findUnique({
+      where: { id: userData.id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        balance: true,
+        rekening: true,
+        role: true,
+      },
+    });
+    return user;
+  } catch (error) {
+    console.error("Error fetching user by token:", error);
+    throw new Error("Failed to fetch user by token.");
+  }
+};
+
 module.exports = {
   getAllUser,
   getUserById,
   editUser,
   deleteUser,
+  getUserLogin,
 };

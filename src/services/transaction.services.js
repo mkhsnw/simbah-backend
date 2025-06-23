@@ -174,9 +174,81 @@ const getTransactionByUser = async (userId) => {
   }
 };
 
+const getReportData = async (userId) => {
+  try {
+    const transactions = await prisma.transaction.findMany({
+      where: { userId: userId },
+      include: {
+        items: {
+          include: {
+            wasteCategory: true,
+          },
+        },
+      },
+    });
+    const totalDeposit = transactions
+      .filter((transaction) => transaction.type === "DEPOSIT")
+      .reduce(
+        (total, transaction) => total + Number(transaction.totalAmount),
+        0
+      );
+
+    const totalWithdraw = transactions
+      .filter((transaction) => transaction.type === "WITHDRAWAL")
+      .reduce(
+        (total, transaction) => total + Number(transaction.totalAmount),
+        0
+      );
+
+    const totalTransaction = transactions.length;
+
+    const totalWasteWeight = transactions
+      .filter((transaction) => transaction.type === "DEPOSIT")
+      .reduce((total, transaction) => {
+        if (transaction.items && transaction.items.length > 0) {
+          const transactionWeight = transaction.items.reduce((acc, item) => {
+            return acc + Number(item.weightInKg);
+          }, 0);
+          return total + transactionWeight;
+        }
+        return total;
+      }, 0);
+
+    const depositCount = transactions.filter(
+      (t) => t.type === "DEPOSIT"
+    ).length;
+    const withdrawalCount = transactions.filter(
+      (t) => t.type === "WITHDRAWAL"
+    ).length;
+
+    // 7. Current balance dari user
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { balance: true },
+    });
+
+    return {
+      totalDeposit,
+      totalWithdraw,
+      totalTransaction,
+      totalWasteWeight,
+      depositCount,
+      withdrawalCount,
+      currentBalance: user ? Number(user.balance) : 0,
+      averageDepositAmount: depositCount > 0 ? totalDeposit / depositCount : 0,
+      averageWithdrawAmount:
+        withdrawalCount > 0 ? totalWithdraw / withdrawalCount : 0,
+    };
+  } catch (error) {
+    console.error("Error fetching report data:", error);
+    throw new Error("Failed to fetch report data.");
+  }
+};
+
 module.exports = {
   createDepositTransaction,
   createWithdrawTransaction,
   getAllTransactions,
   getTransactionByUser,
+  getReportData,
 };

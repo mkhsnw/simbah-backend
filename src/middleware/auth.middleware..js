@@ -1,15 +1,26 @@
 const { verivyToken } = require("../utils/token");
 
-const validateAuth = async (req, res, next) => {
+const getToken = (req) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return null;
+  }
+  const token = authHeader.split(" ")[1];
+  if (!token) {
+    return null;
+  }
+  return token;
+}
+
+const validateAuth = async (req, res, next) => {
+  const token = getToken(req);
+  if (!token) {
     return res.status(401).json({
       success: false,
       message: "Unauthorized access",
     });
   }
 
-  const token = authHeader.split(" ")[1];
   if (!token) {
     return res.status(401).json({
       success: false,
@@ -27,4 +38,4 @@ const validateAuth = async (req, res, next) => {
   req.user = validToken;
   next();
 };
-module.exports = { validateAuth };
+module.exports = { validateAuth, getToken };

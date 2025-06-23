@@ -1,5 +1,7 @@
 const bcrypt = require("bcryptjs");
 const { registerUser, loginUser } = require("../services/auth.services");
+const { getUserLogin } = require("../services/user.service");
+const { getToken } = require("../middleware/auth.middleware.");
 
 const register = async (req, res, next) => {
   try {
@@ -19,12 +21,12 @@ const login = async (req, res, next) => {
     const user = await loginUser(email, password);
     if (!user) {
       res.status(401).json({
-        status: false,
+        success: false,
         message: "User not found or invalid credentials",
       });
     }
     res.status(200).json({
-      status: true,
+      success: true,
       message: "Login Successful",
       token: user.token,
     });
@@ -34,6 +36,21 @@ const login = async (req, res, next) => {
   }
 };
 
+const getLoginDetail = async (req, res, next) => {
+  try {
+    const token = getToken(req);
+    const user = await getUserLogin(token);
+    res.status(200).json({
+      success: true,
+      data: user,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
-  register, login
+  register,
+  login,
+  getLoginDetail,
 };
