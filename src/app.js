@@ -20,13 +20,13 @@ const limiter = rateLimit({
   max: 100, // Limit each IP to 100 requests per windowMs
   message: "Too many requests from this IP, please try again later.",
 });
-app.use("/api/", limiter);
+app.use("/v1/", limiter);
 
 // Routes
-app.use("/api/auth", authRoutes);
-app.use("/api/waste", wasteRoutes);
-app.use("/api/transaction", transactionRoutes);
-app.use("/api/user", userRoutes);
+app.use("/v1/auth", authRoutes);
+app.use("/v1/waste", wasteRoutes);
+app.use("/v1/transaction", transactionRoutes);
+app.use("/v1/user", userRoutes);
 
 app.get("/", (req, res) => {
   res.send({
