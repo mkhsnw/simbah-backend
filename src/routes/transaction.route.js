@@ -6,6 +6,8 @@ const {
   getAllTransactionsController,
   getAllTransactionsByUserController,
   getReportDataController,
+  editTransactionController,
+  deleteTransactionController,
 } = require("../controller/transaction.controller");
 const router = express.Router();
 
@@ -19,5 +21,7 @@ router.post(
 router.get("/", validateAuth, getAllTransactionsController);
 router.get("/user", validateAuth, getAllTransactionsByUserController);
 router.get("/report", validateAuth, getReportDataController);
+router.put("/:id", validateAuth, editTransactionController);
+router.delete("/:id", validateAuth, deleteTransactionController)
 
 module.exports = router;

@@ -4,6 +4,7 @@ const getAllWaste = async () => {
   try {
     const waste = await prisma.wasteCategory.findMany({
       select: {
+        id: true,
         name: true,
         pricePerKg: true,
       },

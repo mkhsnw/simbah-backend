@@ -245,9 +245,339 @@ const getReportData = async (userId) => {
   }
 };
 
+const editTransaction = async (transactionId, updateData, userId) => {
+  return prisma.$transaction(async (tx) => {
+    try {
+      console.log("=== EDIT TRANSACTION START ===");
+      console.log("Transaction ID:", transactionId);
+      console.log("Update Data:", updateData);
+      console.log("User ID:", userId);
+
+      // 1. Ambil transaksi yang akan diedit beserta data terkait
+      const currentTransaction = await tx.transaction.findUnique({
+        where: { id: transactionId },
+        include: {
+          items: {
+            include: {
+              wasteCategory: true,
+            },
+          },
+          user: true,
+        },
+      });
+
+      if (!currentTransaction) {
+        throw new Error("Transaction not found");
+      }
+
+      const oldTotalAmount = Number(currentTransaction.totalAmount);
+      console.log("Old total amount:", oldTotalAmount);
+
+      let newTotalAmount = oldTotalAmount;
+
+      if (currentTransaction.type === "DEPOSIT") {
+        newTotalAmount = await handleDepositEdit(
+          tx,
+          currentTransaction,
+          updateData
+        );
+      } else if (currentTransaction.type === "WITHDRAWAL") {
+        newTotalAmount = await handleWithdrawalEdit(
+          tx,
+          currentTransaction,
+          updateData
+        );
+      }
+
+      console.log("New total amount:", newTotalAmount);
+
+      if (oldTotalAmount !== newTotalAmount) {
+        await updateUserBalanceOnEdit(
+          tx,
+          userId,
+          currentTransaction.type,
+          oldTotalAmount,
+          newTotalAmount
+        );
+      }
+
+      // 6. Update record transaksi
+      const updatedTransaction = await tx.transaction.update({
+        where: { id: transactionId },
+        data: {
+          description: updateData.description || currentTransaction.description,
+          totalAmount: newTotalAmount,
+          updatedAt: new Date(),
+        },
+      });
+
+      // 7. Return data lengkap
+      return await tx.transaction.findUnique({
+        where: { id: transactionId },
+        include: {
+          items: {
+            include: {
+              wasteCategory: true,
+            },
+          },
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              balance: true,
+            },
+          },
+        },
+      });
+    } catch (error) {
+      console.error("Error editing transaction:", error);
+      throw error;
+    }
+  });
+};
+
+const handleDepositEdit = async (tx, currentTransaction, updateData) => {
+  let newTotalAmount = 0;
+
+  // Jika ada perubahan items
+  if (
+    updateData.items &&
+    Array.isArray(updateData.items) &&
+    updateData.items.length > 0
+  ) {
+    console.log("Updating items for DEPOSIT transaction");
+
+    await tx.transactionItem.deleteMany({
+      where: { transactionId: currentTransaction.id },
+    });
+
+    const itemCreationData = [];
+
+    for (const item of updateData.items) {
+      const wasteCategory = await tx.wasteCategory.findUnique({
+        where: { id: item.wasteCategoryId },
+      });
+
+      if (!wasteCategory) {
+        throw new Error(
+          `Waste category with ID ${item.wasteCategoryId} not found`
+        );
+      }
+
+      const subtotal =
+        Number(wasteCategory.pricePerKg) * Number(item.weightInKg);
+      newTotalAmount += subtotal;
+
+      itemCreationData.push({
+        transactionId: currentTransaction.id,
+        wasteCategoryId: item.wasteCategoryId,
+        weightInKg: Number(item.weightInKg),
+        subtotal: subtotal,
+      });
+    }
+
+    if (itemCreationData.length > 0) {
+      await tx.transactionItem.createMany({
+        data: itemCreationData,
+      });
+    }
+
+    console.log("New total calculated from items:", newTotalAmount);
+  } else {
+    if (updateData.totalAmount !== undefined) {
+      console.log(
+        "⚠️ WARNING: Manual totalAmount update for DEPOSIT (not recommended)"
+      );
+      newTotalAmount = Number(updateData.totalAmount);
+    } else {
+      newTotalAmount = Number(currentTransaction.totalAmount);
+    }
+  }
+
+  return newTotalAmount;
+};
+
+const handleWithdrawalEdit = async (tx, currentTransaction, updateData) => {
+  let newAmount = Number(currentTransaction.totalAmount);
+
+  if (updateData.totalAmount !== undefined) {
+    newAmount = Number(updateData.totalAmount);
+    console.log(
+      "Updating withdrawal amount from",
+      currentTransaction.totalAmount,
+      "to",
+      newAmount
+    );
+
+    const currentUser = await tx.user.findUnique({
+      where: { id: currentTransaction.userId },
+    });
+
+    const balanceAfterRollback =
+      Number(currentUser.balance) + Number(currentTransaction.totalAmount);
+    console.log("Balance after rollback:", balanceAfterRollback);
+
+    if (balanceAfterRollback < newAmount) {
+      throw new Error(
+        `Insufficient balance. Available: Rp ${balanceAfterRollback.toLocaleString()}, Required: Rp ${newAmount.toLocaleString()}`
+      );
+    }
+  }
+
+  return newAmount;
+};
+
+const updateUserBalanceOnEdit = async (
+  tx,
+  userId,
+  transactionType,
+  oldAmount,
+  newAmount
+) => {
+  const amountDifference = newAmount - oldAmount;
+  console.log("Balance adjustment needed:", amountDifference);
+
+  if (transactionType === "DEPOSIT") {
+    await tx.user.update({
+      where: { id: userId },
+      data: {
+        balance: {
+          increment: amountDifference,
+        },
+      },
+    });
+  } else if (transactionType === "WITHDRAWAL") {
+    await tx.user.update({
+      where: { id: userId },
+      data: {
+        balance: {
+          decrement: amountDifference,
+        },
+      },
+    });
+  }
+
+  console.log("User balance updated by:", amountDifference);
+};
+
+const deleteTransaction = async (transactionId, userId, userRole) => {
+  return prisma.$transaction(async (tx) => {
+    try {
+      console.log("=== DELETE TRANSACTION START ===");
+      console.log("Transaction ID:", transactionId);
+      console.log("User ID:", userId);
+      console.log("User Role:", userRole);
+
+      // 1. Ambil data transaksi yang akan dihapus
+      const transactionToDelete = await tx.transaction.findUnique({
+        where: { id: transactionId },
+        include: {
+          items: {
+            include: {
+              wasteCategory: true
+            }
+          },
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              balance: true
+            }
+          }
+        }
+      });
+
+      if (!transactionToDelete) {
+        throw new Error("Transaction not found");
+      }
+
+      console.log("Transaction found:", {
+        id: transactionToDelete.id,
+        type: transactionToDelete.type,
+        totalAmount: transactionToDelete.totalAmount,
+        userId: transactionToDelete.userId
+      });
+
+      const transactionAmount = Number(transactionToDelete.totalAmount);
+      
+      if (transactionToDelete.type === "DEPOSIT") {
+        const currentUser = await tx.user.findUnique({
+          where: { id: transactionToDelete.userId }
+        });
+
+        if (Number(currentUser.balance) < transactionAmount) {
+          throw new Error(
+            `Cannot delete transaction. Insufficient balance for rollback. ` +
+            `Current balance: Rp ${Number(currentUser.balance).toLocaleString()}, ` +
+            `Required: Rp ${transactionAmount.toLocaleString()}`
+          );
+        }
+
+        await tx.user.update({
+          where: { id: transactionToDelete.userId },
+          data: {
+            balance: {
+              decrement: transactionAmount
+            }
+          }
+        });
+
+        console.log(`DEPOSIT rollback: Reduced balance by ${transactionAmount}`);
+
+      } else if (transactionToDelete.type === "WITHDRAWAL") {
+        await tx.user.update({
+          where: { id: transactionToDelete.userId },
+          data: {
+            balance: {
+              increment: transactionAmount
+            }
+          }
+        });
+
+        console.log(`WITHDRAWAL rollback: Added balance by ${transactionAmount}`);
+      }
+
+      if (transactionToDelete.items && transactionToDelete.items.length > 0) {
+        await tx.transactionItem.deleteMany({
+          where: { transactionId: transactionId }
+        });
+        console.log(`Deleted ${transactionToDelete.items.length} transaction items`);
+      }
+
+      await tx.transaction.delete({
+        where: { id: transactionId }
+      });
+
+      console.log("Transaction deleted successfully");
+
+      return {
+        deletedTransaction: {
+          id: transactionToDelete.id,
+          type: transactionToDelete.type,
+          totalAmount: transactionToDelete.totalAmount,
+          description: transactionToDelete.description,
+          createdAt: transactionToDelete.createdAt
+        },
+        balanceAdjustment: {
+          type: transactionToDelete.type === "DEPOSIT" ? "decreased" : "increased",
+          amount: transactionAmount
+        }
+      };
+
+    } catch (error) {
+      console.error("Error deleting transaction:", error);
+      throw error;
+    }
+  });
+};
+
 module.exports = {
   createDepositTransaction,
   createWithdrawTransaction,
+  editTransaction,
+  deleteTransaction,
   getAllTransactions,
   getTransactionByUser,
   getReportData,

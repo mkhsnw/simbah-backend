@@ -7,6 +7,7 @@ const validateTransaction = (req, res, next) => {
   if (type === "DEPOSIT") {
     schema = joi.object({
       type: joi.string().valid("DEPOSIT").required(),
+      userId: joi.string().required(),
       description: joi.string().max(255).optional().allow(""),
       items: joi
         .array()
@@ -22,8 +23,9 @@ const validateTransaction = (req, res, next) => {
   } else if (type === "WITHDRAWAL") {
     schema = joi.object({
       type: joi.string().valid("WITHDRAWAL").required(),
+      userId: joi.string().required(),
       description: joi.string().max(255).optional().allow(""),
-      amount: joi.number().positive().required(),
+      amount: joi.number().positive().min(50000).required(),
     });
   } else {
     return res.status(400).json({
@@ -44,5 +46,5 @@ const validateTransaction = (req, res, next) => {
 };
 
 module.exports = {
-  validateTransaction
-}
+  validateTransaction,
+};

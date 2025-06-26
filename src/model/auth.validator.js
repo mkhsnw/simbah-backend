@@ -5,6 +5,7 @@ const validateRegister = (req, res, next) => {
     email: joi.string().email().required(),
     password: joi.string().min(8).required(),
     name: joi.string().min(2).required(),
+    role: joi.string().valid("USER", "ADMIN").default("USER"),
   });
 
   const { error } = schema.validate(req.body);
