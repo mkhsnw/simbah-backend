@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql" // Atau "mysql", "sqlite", "sqlserver"
+  provider = "mysql" // Atau "mysql", "sqlite", "sqlserver"
   url      = env("DATABASE_URL")
 }
 
