@@ -14,7 +14,6 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - simbah-network
-    # JANGAN expose port database - biarkan internal saja untuk keamanan
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
@@ -30,8 +29,6 @@ services:
     container_name: simbah-api
     restart: unless-stopped
     ports:
-      # PILIHAN PORT AMAN (pilih salah satu):
-      # Option 1: Port 3001 (dekat dengan port internal 3000)
       - "3001:3000"
     environment:
       NODE_ENV: production
