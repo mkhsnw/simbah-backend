@@ -1,44 +1,57 @@
 version: "3.8"
 
 services:
-  # Service untuk Aplikasi Node.js Anda
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    ports:
-      # Mapping port container 3000 ke port 8080 di VPS
-      - "8080:3000"
-    environment:
-      # Variabel ini akan diambil dari file .env.production
-      - NODE_ENV=${NODE_ENV}
-      - DATABASE_URL=${DATABASE_URL}
-      - PORT=${PORT}
-      - JWT_SECRET=${JWT_SECRET}
-    depends_on:
-      db:
-        condition: service_healthy
-
-  # Service untuk Database PostgreSQL
+  # Service Database PostgreSQL
   db:
     image: postgres:15-alpine
+    container_name: simbah-postgres
     restart: unless-stopped
     environment:
-      # Variabel ini juga diambil dari file .env.production
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
-      # Menyimpan data database secara permanen
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - simbah-network
+    # JANGAN expose port database - biarkan internal saja untuk keamanan
     healthcheck:
-      # Memastikan database siap sebelum aplikasi dimulai
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
+
+  # Service Aplikasi Node.js
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: simbah-api
+    restart: unless-stopped
+    ports:
+      # PILIHAN PORT AMAN (pilih salah satu):
+      # Option 1: Port 3001 (dekat dengan port internal 3000)
+      - "3001:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - simbah-network
+    volumes:
+      - ./logs:/usr/src/app/logs
+    env_file:
+      - .env
 
 volumes:
-  # Mendefinisikan volume yang akan digunakan oleh service 'db'
   postgres_data:
+    driver: local
+
+networks:
+  simbah-network:
+    driver: bridge

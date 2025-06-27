@@ -21,7 +21,3 @@ Thumbs.db
 # IDE / Editor folders
 .vscode
 .idea
-
-# Prisma
-prisma/migrations
-.prisma/client
