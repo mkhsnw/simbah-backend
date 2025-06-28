@@ -23,7 +23,7 @@ const limiter = rateLimit({
 app.use("/v1/", limiter);
 
 // Routes
-app.use("/v1/auth", authRoutes);
+app.use("/v1s/auth", authRoutes);
 app.use("/v1/waste", wasteRoutes);
 app.use("/v1/transaction", transactionRoutes);
 app.use("/v1/user", userRoutes);
