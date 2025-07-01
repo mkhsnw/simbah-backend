@@ -6,6 +6,7 @@ const wasteRoutes = require("./routes/waste.route");
 const transactionRoutes = require("./routes/transaction.route");
 const rateLimit = require("express-rate-limit");
 const userRoutes = require("./routes/user.route");
+const withdrawalRoutes = require("./routes/withdrawal.route");
 
 dotenv.config();
 const app = express();
@@ -23,10 +24,11 @@ const limiter = rateLimit({
 app.use("/v1/", limiter);
 
 // Routes
-app.use("/v1s/auth", authRoutes);
+app.use("/v1/auth", authRoutes);
 app.use("/v1/waste", wasteRoutes);
 app.use("/v1/transaction", transactionRoutes);
 app.use("/v1/user", userRoutes);
+app.use("/v1/withdrawal", withdrawalRoutes);
 
 app.get("/", (req, res) => {
   res.send({

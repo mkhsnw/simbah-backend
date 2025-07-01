@@ -475,18 +475,18 @@ const deleteTransaction = async (transactionId, userId, userRole) => {
         include: {
           items: {
             include: {
-              wasteCategory: true
-            }
+              wasteCategory: true,
+            },
           },
           user: {
             select: {
               id: true,
               name: true,
               email: true,
-              balance: true
-            }
-          }
-        }
+              balance: true,
+            },
+          },
+        },
       });
 
       if (!transactionToDelete) {
@@ -497,21 +497,23 @@ const deleteTransaction = async (transactionId, userId, userRole) => {
         id: transactionToDelete.id,
         type: transactionToDelete.type,
         totalAmount: transactionToDelete.totalAmount,
-        userId: transactionToDelete.userId
+        userId: transactionToDelete.userId,
       });
 
       const transactionAmount = Number(transactionToDelete.totalAmount);
-      
+
       if (transactionToDelete.type === "DEPOSIT") {
         const currentUser = await tx.user.findUnique({
-          where: { id: transactionToDelete.userId }
+          where: { id: transactionToDelete.userId },
         });
 
         if (Number(currentUser.balance) < transactionAmount) {
           throw new Error(
             `Cannot delete transaction. Insufficient balance for rollback. ` +
-            `Current balance: Rp ${Number(currentUser.balance).toLocaleString()}, ` +
-            `Required: Rp ${transactionAmount.toLocaleString()}`
+              `Current balance: Rp ${Number(
+                currentUser.balance
+              ).toLocaleString()}, ` +
+              `Required: Rp ${transactionAmount.toLocaleString()}`
           );
         }
 
@@ -519,35 +521,40 @@ const deleteTransaction = async (transactionId, userId, userRole) => {
           where: { id: transactionToDelete.userId },
           data: {
             balance: {
-              decrement: transactionAmount
-            }
-          }
+              decrement: transactionAmount,
+            },
+          },
         });
 
-        console.log(`DEPOSIT rollback: Reduced balance by ${transactionAmount}`);
-
+        console.log(
+          `DEPOSIT rollback: Reduced balance by ${transactionAmount}`
+        );
       } else if (transactionToDelete.type === "WITHDRAWAL") {
         await tx.user.update({
           where: { id: transactionToDelete.userId },
           data: {
             balance: {
-              increment: transactionAmount
-            }
-          }
+              increment: transactionAmount,
+            },
+          },
         });
 
-        console.log(`WITHDRAWAL rollback: Added balance by ${transactionAmount}`);
+        console.log(
+          `WITHDRAWAL rollback: Added balance by ${transactionAmount}`
+        );
       }
 
       if (transactionToDelete.items && transactionToDelete.items.length > 0) {
         await tx.transactionItem.deleteMany({
-          where: { transactionId: transactionId }
+          where: { transactionId: transactionId },
         });
-        console.log(`Deleted ${transactionToDelete.items.length} transaction items`);
+        console.log(
+          `Deleted ${transactionToDelete.items.length} transaction items`
+        );
       }
 
       await tx.transaction.delete({
-        where: { id: transactionId }
+        where: { id: transactionId },
       });
 
       console.log("Transaction deleted successfully");
@@ -558,14 +565,14 @@ const deleteTransaction = async (transactionId, userId, userRole) => {
           type: transactionToDelete.type,
           totalAmount: transactionToDelete.totalAmount,
           description: transactionToDelete.description,
-          createdAt: transactionToDelete.createdAt
+          createdAt: transactionToDelete.createdAt,
         },
         balanceAdjustment: {
-          type: transactionToDelete.type === "DEPOSIT" ? "decreased" : "increased",
-          amount: transactionAmount
-        }
+          type:
+            transactionToDelete.type === "DEPOSIT" ? "decreased" : "increased",
+          amount: transactionAmount,
+        },
       };
-
     } catch (error) {
       console.error("Error deleting transaction:", error);
       throw error;
