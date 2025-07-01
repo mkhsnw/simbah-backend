@@ -76,6 +76,15 @@ const processRequest = async (req, res, next) => {
     const { action, adminNote } = req.body;
     const adminId = req.user.id;
 
+    if (req.user.role !== "ADMIN") {
+      return res.status(403).json({
+        success: false,
+        message: "Only admins can process withdrawal requests",
+      });
+    }
+
+    console.log(req.user);
+
     if (!["APPROVED", "REJECTED"].includes(action)) {
       return res.status(400).json({
         success: false,
